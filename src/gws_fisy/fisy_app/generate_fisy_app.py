@@ -1,24 +1,24 @@
 from gws_core import (ConfigParams, AppConfig, AppType, OutputSpec,
                       OutputSpecs, ReflexResource, Task, TaskInputs,
-                      TaskOutputs, app_decorator, task_decorator, 
+                      TaskOutputs, app_decorator, task_decorator,
                       InputSpecs, ConfigSpecs)
 
 
-@app_decorator("FisyAppRxAppConfig", app_type=AppType.REFLEX,
-               human_name="Generate FisyAppRx app")
-class FisyAppRxAppConfig(AppConfig):
+@app_decorator("FisyAppConfig", app_type=AppType.REFLEX,
+               human_name="Generate FisyApp app")
+class FisyAppConfig(AppConfig):
 
     # retrieve the path of the app folder, relative to this file
     # the app code folder starts with a underscore to avoid being loaded when the brick is loaded
     def get_app_folder_path(self):
-        return self.get_app_folder_from_relative_path(__file__, "_fisy_app_rx")
+        return self.get_app_folder_from_relative_path(__file__, "_fisy_app")
 
 
-@task_decorator("GenerateFisyAppRx", human_name="Generate FisyAppRx app",
+@task_decorator("GenerateFisyApp", human_name="Generate FisyApp app",
                 style=ReflexResource.copy_style())
-class GenerateFisyAppRx(Task):
+class GenerateFisyApp(Task):
     """
-    Task that generates the FisyAppRx app.
+    Task that generates the FisyApp app.
     """
 
     input_specs = InputSpecs()
@@ -33,7 +33,7 @@ class GenerateFisyAppRx(Task):
 
         reflex_app = ReflexResource()
 
-        reflex_app.set_app_config(FisyAppRxAppConfig())
-        reflex_app.name = "FisyAppRx"
+        reflex_app.set_app_config(FisyAppConfig())
+        reflex_app.name = "FisyApp"
 
         return {"reflex_app": reflex_app}

@@ -70,7 +70,7 @@ if api_url is None:
 # [END_AUTO_CODE]
 
 config = rx.Config(
-    app_name="fisy_app_rx",
+    app_name="fisy_app",
     plugins=[],
     # [START_AUTO_CODE]
     api_url=api_url
