@@ -8,7 +8,7 @@ def funding_plan():
     return layout(
         rx.vstack(
             rx.heading("Plan de financement (annuel)", size="7"),
-            rx.text("Vision annuelle des ressources et emplois, consolidée par année."),
+            rx.text("Regroupement annuel des flux."),
             rx.box(height="2"),
             table(State.plan_rows, State.plan_cols),
             spacing="4",

@@ -21,7 +21,7 @@ def orders():
             rx.heading("Commandes (ventes)", size="5"),
             rx.text("Planifiez des ventes ponctuelles par activité et mois."),
             rx.table.root(header_row(LABELS, WIDTHS), rx.table.body(rx.foreach(State.orders, row))),
-            rx.hstack(rx.button("Ajouter une commande", on_click=State.add_order)),
+            rx.hstack(rx.button("Ajouter une commande", on_click=lambda: State.add_order())),
             spacing="3", align_items="start",
         )
     )

@@ -23,7 +23,7 @@ def investments():
             rx.heading("Investissements", size="5"),
             rx.text("Saisissez vos immobilisations et leur amortissement."),
             rx.table.root(header_row(LABELS, WIDTHS), rx.table.body(rx.foreach(State.investments, row))),
-            rx.hstack(rx.button("Ajouter un investissement", on_click=State.add_investment)),
+            rx.hstack(rx.button("Ajouter un investissement", on_click=lambda: State.add_investment())),
             spacing="3", align_items="start",
         )
     )

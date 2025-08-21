@@ -8,7 +8,7 @@ def summary():
     return layout(
         rx.vstack(
             rx.heading("Synthèse", size="7"),
-            rx.text("Vue d’ensemble des indicateurs clés calculés à partir de vos saisies."),
+            rx.text("Indicateurs clés (inclut MRR issu des abonnements)."),
             rx.box(height="2"),
             table(State.synthese_rows, State.synthese_cols),
             spacing="4",

@@ -24,7 +24,7 @@ def sales_ranges():
             rx.heading("Ventes par plages (début/fin + croissance)", size="5"),
             rx.text("Saisissez des plages de ventes par activité : mois de début/fin, quantité initiale, croissance totale (ex. 0.2 = +20%) et mode (CAGR ou linéaire)."),
             rx.table.root(header_row(LABELS, WIDTHS), rx.table.body(rx.foreach(State.sale_ranges, row))),
-            rx.hstack(rx.button("Ajouter une plage", on_click=State.add_sale_range)),
+            rx.hstack(rx.button("Ajouter une plage", on_click=lambda: State.add_sale_range())),
             spacing="3", align_items="start",
         )
     )

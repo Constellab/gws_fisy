@@ -10,5 +10,5 @@ def index():
         rx.vstack(
             rx.heading("Bienvenue 👋", size="8"),
             rx.text(
-                "Utilisez le menu latéral pour naviguer. Les tableaux de bord proposent des graphiques et le zoom par période."),
+                "Utilisez le menu pour saisir vos hypothèses. Les Abonnements alimentent aussi la métrique MRR dans la synthèse."),
             spacing="4",))

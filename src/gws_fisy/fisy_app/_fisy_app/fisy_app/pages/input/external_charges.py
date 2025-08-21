@@ -23,7 +23,7 @@ def external_charges():
             rx.heading("Charges externes", size="5"),
             rx.text("Déclarez vos charges récurrentes avec TVA et période."),
             rx.table.root(header_row(LABELS, WIDTHS), rx.table.body(rx.foreach(State.charges, row))),
-            rx.hstack(rx.button("Ajouter une charge", on_click=State.add_charge)),
+            rx.hstack(rx.button("Ajouter une charge", on_click=lambda: State.add_charge())),
             spacing="3", align_items="start",
         )
     )

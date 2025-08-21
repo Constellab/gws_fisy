@@ -8,7 +8,7 @@ def overview():
     return layout(
         rx.vstack(
             rx.heading("Saisie — Récapitulatif", size="7"),
-            rx.text("Saisissez vos données dans les tableaux dynamiques : Activités, Ventes par plages, Commandes, Personnel, Charges, Investissements, Financement."),
+            rx.text("Saisissez vos activités, ventes ponctuelles, abonnements, RH, charges, investissements, financement."),
             spacing="3",
         )
     )

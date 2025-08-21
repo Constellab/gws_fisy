@@ -8,7 +8,7 @@ def balance_sheets():
     return layout(
         rx.vstack(
             rx.heading("Bilans", size="7"),
-            rx.text("Bilans Actif et Passif calculés à partir des flux et investissements."),
+            rx.text("Bilans Actif et Passif (simplifiés)."),
             rx.box(height="2"),
             rx.heading("Bilan — Actif", size="6"),
             table(State.bilan_actif_rows, State.bilan_actif_cols),

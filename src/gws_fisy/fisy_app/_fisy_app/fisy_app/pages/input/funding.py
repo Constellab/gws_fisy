@@ -45,15 +45,15 @@ def funding():
             rx.box(height="2"),
             rx.heading("Apports en capital", size="4"),
             rx.table.root(header_row(CAP_LABELS, CAP_WIDTHS), rx.table.body(rx.foreach(State.caps, row_cap))),
-            rx.hstack(rx.button("Ajouter un apport", on_click=State.add_capital)),
+            rx.hstack(rx.button("Ajouter un apport", on_click=lambda: State.add_capital())),
             rx.box(height="3"),
             rx.heading("Subventions", size="4"),
             rx.table.root(header_row(SUB_LABELS, SUB_WIDTHS), rx.table.body(rx.foreach(State.subsidies, row_sub))),
-            rx.hstack(rx.button("Ajouter une subvention", on_click=State.add_subsidy)),
+            rx.hstack(rx.button("Ajouter une subvention", on_click=lambda: State.add_subsidy())),
             rx.box(height="3"),
             rx.heading("Prêts", size="4"),
             rx.table.root(header_row(LOAN_LABELS, LOAN_WIDTHS), rx.table.body(rx.foreach(State.loans, row_loan))),
-            rx.hstack(rx.button("Ajouter un prêt", on_click=State.add_loan)),
+            rx.hstack(rx.button("Ajouter un prêt", on_click=lambda: State.add_loan())),
             spacing="3", align_items="start",
         )
     )

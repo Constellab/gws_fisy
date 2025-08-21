@@ -1,7 +1,7 @@
-
 import reflex as rx
 from ..layout import layout
 from ...state import State
+
 
 def zoom_controls():
     return rx.hstack(
@@ -21,8 +21,8 @@ def zoom_controls():
         ),
         rx.spacer(),
         rx.hstack(
-            rx.button("3M",  size="2", on_click=State.zoom_3m),
-            rx.button("6M",  size="2", on_click=State.zoom_6m),
+            rx.button("3M", size="2", on_click=State.zoom_3m),
+            rx.button("6M", size="2", on_click=State.zoom_6m),
             rx.button("12M", size="2", on_click=State.zoom_12m),
             rx.button("Tout", size="2", variant="soft", on_click=State.zoom_all),
             spacing="2",
@@ -31,30 +31,40 @@ def zoom_controls():
         align="center",
     )
 
-def line_chart(data, x_key, series_keys):
+
+def line_chart(data, x_key, series_defs):
+    # series_defs = [{ "key": str, "color": str, "unit": str }, ...]
     return rx.recharts.responsive_container(
         rx.recharts.line_chart(
+            rx.recharts.cartesian_grid(stroke_dasharray="3 3"),
+            rx.recharts.x_axis(data_key=x_key),
+            rx.recharts.y_axis(),
+            rx.recharts.tooltip(),
+            rx.recharts.legend(),
+            rx.foreach(
+                series_defs,
+                lambda s: rx.recharts.line(
+                    data_key=s["key"],
+                    type_="monotone",
+                    stroke_width=2,
+                    stroke=s["color"],
+                    unit=s["unit"],  # unité affichée dans tooltip/legend
+                ),
+            ),
+            rx.recharts.brush(data_key=x_key, height=22),
             data=data,
-            children=[
-                rx.recharts.cartesian_grid(stroke_dasharray="3 3"),
-                rx.recharts.x_axis(data_key=x_key),
-                rx.recharts.y_axis(),
-                rx.recharts.tooltip(),
-                rx.recharts.legend(),
-                rx.foreach(series_keys, lambda k: rx.recharts.line(data_key=k, type_="monotone", stroke_width=2)),
-                rx.recharts.brush(data_key=x_key, height=22),
-            ],
         ),
         width="100%",
         height=360,
     )
+
 
 @rx.page(route="/resultats/dash", on_load=State.on_load, title="Résultats — Tableaux de bord")
 def dashboard():
     return layout(
         rx.vstack(
             rx.heading("Tableaux de bord — Résultats", size="7"),
-            rx.text("Visualisez vos résultats via des graphiques interactifs. Utilisez les contrôles de zoom pour vous concentrer sur une période."),
+            rx.text("Graphiques interactifs (utilisez le zoom)."),
             rx.box(height="2"),
             zoom_controls(),
             rx.tabs.root(
@@ -62,32 +72,33 @@ def dashboard():
                     rx.tabs.trigger("Synthèse", value="syn"),
                     rx.tabs.trigger("Compte de résultat", value="pnl"),
                     rx.tabs.trigger("Cashflow", value="cf"),
-                    value="syn",
                 ),
                 rx.tabs.content(
-                    value="syn",
-                    children=rx.vstack(
+                    rx.vstack(
                         rx.heading("Synthèse — Graphique", size="4"),
-                        line_chart(State.synthese_chart_rows, "index", State.synthese_series),
+                        line_chart(State.synthese_chart_rows, "index", State.synthese_series_defs),
                         spacing="3",
                     ),
+                    value="syn",
                 ),
                 rx.tabs.content(
-                    value="pnl",
-                    children=rx.vstack(
+                    rx.vstack(
                         rx.heading("Compte de résultat — Graphique", size="4"),
-                        line_chart(State.pnl_chart_rows, "index", State.pnl_series),
+                        line_chart(State.pnl_chart_rows, "index", State.pnl_series_defs),
                         spacing="3",
                     ),
+                    value="pnl",
                 ),
                 rx.tabs.content(
-                    value="cf",
-                    children=rx.vstack(
+                    rx.vstack(
                         rx.heading("Cashflow — Graphique", size="4"),
-                        line_chart(State.cashflow_chart_rows, "index", State.cashflow_series),
+                        line_chart(State.cashflow_chart_rows, "index", State.cashflow_series_defs),
                         spacing="3",
                     ),
+                    value="cf",
                 ),
+                # Premier onglet ouvert par défaut
+                default_value="syn",
                 orientation="horizontal",
                 style={"width": "100%"},
             ),

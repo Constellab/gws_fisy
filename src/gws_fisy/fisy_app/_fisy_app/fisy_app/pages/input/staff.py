@@ -23,7 +23,7 @@ def staff():
             rx.heading("Personnel", size="5"),
             rx.text("Renseignez vos postes, salaires et périodes d’activité."),
             rx.table.root(header_row(LABELS, WIDTHS), rx.table.body(rx.foreach(State.personnel, row))),
-            rx.hstack(rx.button("Ajouter un poste", on_click=State.add_personnel)),
+            rx.hstack(rx.button("Ajouter un poste", on_click=lambda: State.add_personnel())),
             spacing="3", align_items="start",
         )
     )

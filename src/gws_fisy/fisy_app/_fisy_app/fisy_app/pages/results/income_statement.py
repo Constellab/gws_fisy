@@ -8,7 +8,7 @@ def income_statement():
     return layout(
         rx.vstack(
             rx.heading("Compte de résultat (mensuel)", size="7"),
-            rx.text("Produits et charges mensuels selon vos hypothèses de vente et de coûts."),
+            rx.text("Produits et charges mensuels."),
             rx.box(height="2"),
             table(State.pnl_rows, State.pnl_cols),
             spacing="4",

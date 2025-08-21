@@ -1,4 +1,4 @@
-# calc/__init__.py
+
 from .models import (
     Config,
     Activity,
@@ -11,19 +11,15 @@ from .models import (
     Subsidy,
 )
 from .engine import compute_all
-from .sale_ranges import SaleRange, expand_sale_ranges_to_orders
+from .sale_ranges import (
+    OneTimeRange,
+    SubscriptionRange,
+    expand_one_time_ranges_to_orders,
+    expand_subscription_ranges_to_orders,
+)
 
 __all__ = [
-    "Config",
-    "Activity",
-    "Order",
-    "PersonnelLine",
-    "ChargeExterne",
-    "Investment",
-    "Loan",
-    "CapitalInjection",
-    "Subsidy",
-    "SaleRange",
-    "expand_sale_ranges_to_orders",
-    "compute_all",
+    "Config","Activity","Order","PersonnelLine","ChargeExterne","Investment","Loan",
+    "CapitalInjection","Subsidy","OneTimeRange","SubscriptionRange",
+    "expand_one_time_ranges_to_orders","expand_subscription_ranges_to_orders","compute_all",
 ]
