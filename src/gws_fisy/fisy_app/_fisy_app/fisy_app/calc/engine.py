@@ -1,21 +1,58 @@
-import numpy as np
+# calc/engine.py
+from __future__ import annotations
+from typing import List, Dict, Any
+import math
 import pandas as pd
-from typing import Dict, Any, List
 
 from .models import (
-    Config, Activity, Order, PersonnelLine, ChargeExterne, Investment,
-    Loan, CapitalInjection, Subsidy
+    Config,
+    Activity,
+    Order,
+    PersonnelLine,
+    ChargeExterne,
+    Investment,
+    Loan,
+    CapitalInjection,
+    Subsidy,
 )
 
-def _series(months: int, val: float = 0.0) -> pd.Series:
-    return pd.Series(float(val), index=pd.RangeIndex(1, months + 1), dtype="float64")
 
-def _annuity_payment(P: float, r_month: float, n: int) -> float:
-    if n <= 0:
-        return 0.0
-    if r_month == 0:
-        return P / n
-    return P * r_month / (1 - (1 + r_month) ** (-n))
+def _zero_series(n: int) -> pd.Series:
+    return pd.Series([0.0] * n, index=range(1, n + 1))
+
+
+def _activity_map(activities: List[Activity]) -> Dict[str, Activity]:
+    return {a.name: a for a in activities}
+
+
+def _amort_schedule_annuity(principal: float, annual_rate: float, months: int):
+    """Return (payment, interests[], principals[], balances[]) for a fixed annuity."""
+    r = annual_rate / 12.0
+    if months <= 0:
+        return 0.0, [], [], []
+    if r == 0:
+        pmt = principal / months if months > 0 else 0.0
+    else:
+        pmt = principal * (r / (1 - (1 + r) ** (-months)))
+    bal = principal
+    interests, principals, balances = [], [], []
+    for _ in range(months):
+        it = bal * r
+        pr = pmt - it
+        bal = max(0.0, bal - pr)
+        interests.append(it)
+        principals.append(pr)
+        balances.append(bal)
+    return pmt, interests, principals, balances
+
+
+def _shift_month(idx: int, shift_days: int) -> int:
+    # crude conversion: 30 days ~ 1 month
+    if shift_days <= 0:
+        return idx
+    m = idx + int(math.ceil(shift_days / 30.0))
+    return m
+
 
 def compute_all(
     cfg: Config,
@@ -28,193 +65,280 @@ def compute_all(
     caps: List[CapitalInjection],
     subsidies: List[Subsidy],
 ) -> Dict[str, Any]:
-    m = cfg.months
-    idx = pd.RangeIndex(1, m + 1)
-    zero = _series(m, 0.0)
+    """Main engine.
 
-    price_map = {a.name: a.unit_price_ht for a in activities}
-    vat_map = {a.name: a.vat_rate for a in activities}
-    var_cost_unit = {a.name: a.variable_cost_per_unit_ht for a in activities}
-    var_cost_rate = {a.name: a.variable_cost_rate_on_price for a in activities}
+    Simplifications :
+    - Revenus/charges HT ; TVA traitée pour flux TTC + (optionnel) règlement mensuel net avec décalage 1 mois.
+    - DSO/DPO appliqués aux encaissements/ décaissements clients/fournisseurs.
+    - Amortissement linéaire mensuel des investissements.
+    - Intérêts et amortissement emprunts via annuité constante.
+    - Bilans : immobilisations nettes, cash, dettes financières, capitaux propres cumulés.
+    """
+    n = int(cfg.months)
+    if n <= 0:
+        # empty frames
+        empty = pd.DataFrame(index=range(1, 1))
+        return {
+            "synthese": empty,
+            "pnl": empty,
+            "cashflow": empty,
+            "plan_financement": pd.DataFrame(),
+            "bilans": {"actif": empty, "passif": empty},
+        }
 
-    revenue_ht = zero.copy()
-    vat_collected = zero.copy()
-    variable_costs_ht = zero.copy()
+    idx = range(1, n + 1)
+    act_map = _activity_map(activities)
+
+    # ---------- SALES ----------
+    revenue_ht = _zero_series(n)
+    revenue_vat = _zero_series(n)  # TVA collectée (sur facturation)
+    var_costs_ht = _zero_series(n)
+
     for o in orders:
-        if 1 <= o.month_index <= m and o.activity in price_map:
-            p = price_map[o.activity]; q = o.quantity
-            revenue_ht.iloc[o.month_index - 1] += p * q
-            vat_collected.iloc[o.month_index - 1] += p * q * vat_map.get(o.activity, cfg.tva_default)
-            rate = var_cost_rate.get(o.activity, 0.0)
-            if rate and rate > 0:
-                variable_costs_ht.iloc[o.month_index - 1] += p * q * rate
-            else:
-                variable_costs_ht.iloc[o.month_index - 1] += var_cost_unit.get(o.activity, 0.0) * q
+        if 1 <= o.month_index <= n and o.activity in act_map:
+            a = act_map[o.activity]
+            price_ht = float(a.unit_price_ht)
+            vat_rate = float(a.vat_rate if a.vat_rate is not None else cfg.tva_default)
+            rev = o.quantity * price_ht
+            revenue_ht[o.month_index] += rev
+            revenue_vat[o.month_index] += rev * vat_rate
+            vc = o.quantity * float(a.variable_cost_per_unit_ht) + rev * float(a.variable_cost_rate_on_price)
+            var_costs_ht[o.month_index] += vc
 
-    personnel_costs = zero.copy()
+    # ---------- PERSONNEL ----------
+    staff_cost = _zero_series(n)
     for p in personnel:
-        start = max(1, p.start_month); end = min(m, p.end_month)
-        monthly = p.monthly_salary_gross * (1 + p.employer_cost_rate)
-        if start <= end:
-            personnel_costs.iloc[start - 1:end] += monthly
-
-    ext_charges_ht = zero.copy()
-    vat_deductible = zero.copy()
-    for c in charges:
-        start = max(1, c.start_month); end = min(m, c.end_month)
-        if start <= end:
-            ext_charges_ht.iloc[start - 1:end] += c.monthly_amount_ht
-            vat_deductible.iloc[start - 1:end] += c.monthly_amount_ht * c.vat_rate
-
-    amort = zero.copy()
-    inv_cash_ttc = zero.copy()
-    fixed_gross = zero.copy()
-    for inv in investments:
-        pm = min(max(1, inv.purchase_month), m)
-        fixed_gross.iloc[pm - 1:] += inv.amount_ht
-        inv_cash_ttc.iloc[pm - 1] += inv.amount_ht * (1 + inv.vat_rate)
-        vat_deductible.iloc[pm - 1] += inv.amount_ht * inv.vat_rate
-        months_amort = max(1, inv.amort_years * 12)
-        monthly_dep = inv.amount_ht / months_amort
-        end = min(m, pm - 1 + months_amort)
-        amort.iloc[pm - 1:end] += monthly_dep
-
-    loan_inflow = zero.copy()
-    loan_payment = zero.copy()
-    loan_interest = zero.copy()
-    loan_outstanding = zero.copy()
-    for loan in loans:
-        sm = min(max(1, loan.start_month), m)
-        n = min(loan.months, m - sm + 1)
-        r = loan.annual_rate / 12.0
-        A = _annuity_payment(loan.principal, r, n)
-        if n <= 0:
+        start = max(1, int(p.start_month))
+        end = min(int(p.end_month), n)
+        if end < start:
             continue
-        loan_inflow.iloc[sm - 1] += loan.principal
-        outstanding = loan.principal
-        for k in range(n):
-            t = sm - 1 + k
-            if t >= m: break
-            interest = outstanding * r
-            principal = max(0.0, A - interest)
-            outstanding = max(0.0, outstanding - principal)
-            loan_payment.iloc[t] += A
-            loan_interest.iloc[t] += interest
-            loan_outstanding.iloc[t] += outstanding
+        monthly = float(p.monthly_salary_gross) * (1.0 + float(p.employer_cost_rate))
+        staff_cost[start: end + 1] += monthly
 
-    cap_inflow = zero.copy()
+    # ---------- EXTERNAL CHARGES ----------
+    ext_charges_ht = _zero_series(n)
+    ext_charges_vat = _zero_series(n)  # TVA déductible (sur facturation fournisseurs)
+    for c in charges:
+        start = max(1, int(c.start_month))
+        end = min(int(c.end_month), n)
+        if end < start:
+            continue
+        amt = float(c.monthly_amount_ht)
+        vat_rate = float(c.vat_rate if c.vat_rate is not None else cfg.tva_default)
+        ext_charges_ht[start: end + 1] += amt
+        ext_charges_vat[start: end + 1] += amt * vat_rate
+
+    # ---------- INVESTMENTS (Capex) & Depreciation ----------
+    depreciation = _zero_series(n)
+    invest_ht = _zero_series(n)      # achat HT
+    invest_vat = _zero_series(n)     # TVA déductible à l'achat
+    for inv in investments:
+        m = int(inv.purchase_month)
+        if 1 <= m <= n:
+            amt_ht = float(inv.amount_ht)
+            invest_ht[m] += amt_ht
+            vat_rate = float(inv.vat_rate if inv.vat_rate is not None else cfg.tva_default)
+            invest_vat[m] += amt_ht * vat_rate
+            months_amort = max(1, int(inv.amort_years) * 12)
+            dep = amt_ht / months_amort
+            end = min(n, m + months_amort - 1)
+            depreciation[m: end + 1] += dep
+
+    # ---------- LOANS ----------
+    loan_interest = _zero_series(n)
+    loan_principal_out = _zero_series(n)  # remboursements (sortie de cash)
+    loan_disbursement_in = _zero_series(n)  # décaissement du prêteur (entrée de cash)
+    loan_balances = _zero_series(n)  # encours en fin de mois (approx)
+
+    for ln in loans:
+        start = int(ln.start_month)
+        principal = float(ln.principal)
+        months = int(ln.months)
+        r = float(ln.annual_rate)
+        if principal <= 0 or months <= 0:
+            continue
+        pmt, interests, principals, balances = _amort_schedule_annuity(principal, r, months)
+        # décaissement du prêteur (entrée de cash) au démarrage
+        if 1 <= start <= n:
+            loan_disbursement_in[start] += principal
+        # étaler pmt
+        for i, (it, pr, bal) in enumerate(zip(interests, principals, balances), start=0):
+            m = start + i
+            if 1 <= m <= n:
+                loan_interest[m] += it
+                loan_principal_out[m] += pr
+                loan_balances[m] += bal
+
+    # ---------- CASH MOVEMENTS (Operating/BFI/Financing) ----------
+    # Encaissements clients (TTC) avec DSO
+    cash_in_customers = _zero_series(n)
+    for m in idx:
+        shift_m = _shift_month(m, cfg.dso_days)
+        if 1 <= shift_m <= n:
+            # TTC: HT + TVA collectée
+            cash_in_customers[shift_m] += revenue_ht[m] + revenue_vat[m]
+
+    # Décaissements fournisseurs (TTC) avec DPO
+    # - coûts variables: on applique TVA par défaut (approximation)
+    var_costs_vat = var_costs_ht * float(cfg.tva_default)
+    cash_out_suppliers = _zero_series(n)
+    for m in idx:
+        shift_m = _shift_month(m, cfg.dpo_days)
+        if 1 <= shift_m <= n:
+            cash_out_suppliers[shift_m] += (var_costs_ht[m] + var_costs_vat[m]
+                                            ) + (ext_charges_ht[m] + ext_charges_vat[m])
+    # Investissements: achat TTC payé au mois d'achat (pas de DPO pour simplifier)
+    invest_ttc = invest_ht + invest_vat
+    cash_out_capex = _zero_series(n) + invest_ttc  # payé au mois m
+
+    # Masse salariale (pas de TVA)
+    cash_out_staff = _zero_series(n) + staff_cost
+
+    # Emprunts: encaissement du principal au début / remboursements mensuels
+    cash_in_loans = loan_disbursement_in
+    cash_out_loans = loan_principal_out + loan_interest  # sorties de trésorerie mensuelles
+
+    # Apports & subventions (entrées de cash)
+    cash_in_caps = _zero_series(n)
     for c in caps:
-        mo = min(max(1, c.month), m)
-        cap_inflow.iloc[mo - 1] += c.amount
-    subsidy_inflow = zero.copy()
+        if 1 <= int(c.month) <= n:
+            cash_in_caps[int(c.month)] += float(c.amount)
+
+    cash_in_subsidies = _zero_series(n)
     for s in subsidies:
-        mo = min(max(1, s.month), m)
-        subsidy_inflow.iloc[mo - 1] += s.amount
+        if 1 <= int(s.month) <= n:
+            cash_in_subsidies[int(s.month)] += float(s.amount)
 
-    ebitda = revenue_ht - variable_costs_ht - personnel_costs - ext_charges_ht
-    ebit = ebitda - amort
+    # ---------- VAT Settlement (optional) ----------
+    # Comme on encaisse/paye TTC avec clients/fournisseurs, on corrige via un
+    # règlement mensuel du net TVA (collectée - déductible) décalé d'1 mois.
+    net_vat = revenue_vat - (ext_charges_vat + invest_vat + var_costs_vat)
+    vat_settlement = _zero_series(n)
+    for m in idx:
+        pay_m = m + 1
+        if 1 <= pay_m <= n:
+            vat_settlement[pay_m] += net_vat[m]  # >0 = on doit payer ; <0 = remboursement
+
+    # ---------- P&L ----------
+    gross_margin = revenue_ht - var_costs_ht
+    ebit = gross_margin - staff_cost - ext_charges_ht - depreciation
+    # Intérêts des emprunts impactent le résultat avant impôt
     ebt = ebit - loan_interest
-    taxes_is = ebt.clip(lower=0) * cfg.corporate_tax_rate
+    corporate_tax = ebt.apply(lambda x: x * cfg.corporate_tax_rate if x > 0 else 0.0)
+    net_income = ebt - corporate_tax
 
-    net_vat = vat_collected - vat_deductible
-    vat_balance = zero.copy()
-    vat_cash = zero.copy()
-    bal = 0.0
-    for t in range(m):
-        bal += net_vat.iloc[t]
-        pay = max(0.0, bal)
-        if t + 1 < m:
-            vat_cash.iloc[t + 1] += pay
-        else:
-            vat_cash.iloc[t] += pay
-        bal -= pay
-        vat_balance.iloc[t] = bal
+    pnl = pd.DataFrame(
+        {
+            "Chiffre d'affaires HT": revenue_ht,
+            "Coûts variables HT": var_costs_ht,
+            "Marge brute": gross_margin,
+            "Charges externes HT": ext_charges_ht,
+            "Masse salariale": staff_cost,
+            "Amortissements": depreciation,
+            "EBIT": ebit,
+            "Intérêts": loan_interest,
+            "EBT": ebt,
+            "IS": corporate_tax,
+            "Résultat net": net_income,
+        }
+    )
 
-    def shift_series(ht, months_shift):
-        shifted = zero.copy()
-        for i in range(1, m + 1):
-            j = i + months_shift
-            if 1 <= j <= m:
-                shifted.iloc[j - 1] += ht.iloc[i - 1]
-        return shifted
+    # ---------- CASHFLOW ----------
+    cash_in = cash_in_customers + cash_in_loans + cash_in_caps + cash_in_subsidies
+    cash_out = cash_out_suppliers + cash_out_capex + cash_out_staff + cash_out_loans + vat_settlement
+    net_cash_flow = cash_in - cash_out
 
-    dso_m = max(0, int(round(cfg.dso_days / 30.0)))
-    dpo_m = max(0, int(round(cfg.dpo_days / 30.0)))
+    cash_start = _zero_series(n)
+    cash_end = _zero_series(n)
+    cash_start[1] = float(cfg.initial_cash)
+    cash_end[1] = cash_start[1] + net_cash_flow[1]
+    for m in range(2, n + 1):
+        cash_start[m] = cash_end[m - 1]
+        cash_end[m] = cash_start[m] + net_cash_flow[m]
 
-    cash_in_sales = shift_series(revenue_ht + vat_collected, dso_m)
-    purchases_ht = variable_costs_ht + ext_charges_ht
-    cash_out_suppliers = shift_series(purchases_ht, dpo_m)
+    cashflow = pd.DataFrame(
+        {
+            "Cash début": cash_start,
+            "Encaissements": cash_in,
+            "Décaissements": cash_out,
+            "Flux net": net_cash_flow,
+            "Cash fin": cash_end,
+        }
+    )
 
-    cash_out_personnel = personnel_costs.copy()
-    cash_out_invest = inv_cash_ttc.copy()
-    cash_out_tax = taxes_is.copy()
+    # ---------- SYNTHÈSE (courte vue pour les charts) ----------
+    synthese = pd.DataFrame(
+        {
+            "CA HT": revenue_ht,
+            "Marge brute": gross_margin,
+            "EBIT": ebit,
+            "Résultat net": net_income,
+            "Cash fin": cash_end,
+        }
+    )
 
-    cash_inflows = cash_in_sales + cap_inflow + subsidy_inflow + loan_inflow
-    cash_outflows = cash_out_suppliers + cash_out_personnel + loan_payment + cash_out_invest + cash_out_tax + vat_cash
-    cash_variation = cash_inflows - cash_outflows
-    cash = cash_variation.cumsum() + cfg.initial_cash
+    # ---------- PLAN DE FINANCEMENT (annualisé, simple) ----------
+    # On regroupe par années civiles à partir de start_year/start_month.
+    def month_to_year(m: int) -> int:
+        # m=1 correspond à (start_year, start_month)
+        year_offset = ((m - 1 + (cfg.start_month - 1)) // 12)
+        return cfg.start_year + year_offset
 
-    pnl = pd.DataFrame({
-        "CA (HT)": revenue_ht,
-        "Variab. (HT)": -variable_costs_ht,
-        "Perso": -personnel_costs,
-        "Charges externes (HT)": -ext_charges_ht,
-        "EBITDA": ebitda,
-        "Amortissements": -amort,
-        "EBIT": ebit,
-        "Intérêts": -loan_interest,
-        "EBT": ebt,
-        "Impôt (IS)": -taxes_is,
-        "Résultat net": ebt - taxes_is,
-    }, index=idx)
+    plan_df = pd.DataFrame(
+        {
+            "Encaissements": cash_in,
+            "Décaissements": cash_out,
+            "Investissements": invest_ttc,
+            "Apports+Subv": (cash_in_caps + cash_in_subsidies),
+            "Emprunts reçus": cash_in_loans,
+            "Remb. emprunts": loan_principal_out + loan_interest,
+        }
+    )
+    plan_df["Année"] = [month_to_year(m) for m in plan_df.index]
+    plan_agg = plan_df.groupby("Année").sum(numeric_only=True)
+    plan_agg["Var. Trésorerie"] = plan_agg["Encaissements"] - plan_agg["Décaissements"]
+    plan_financement = plan_agg[["Encaissements", "Décaissements", "Investissements",
+                                 "Apports+Subv", "Emprunts reçus", "Remb. emprunts", "Var. Trésorerie"]]
 
-    cashflow = pd.DataFrame({
-        "Encaissements ventes (TTC, décalées)": cash_in_sales,
-        "Apports en capital": cap_inflow,
-        "Subventions": subsidy_inflow,
-        "Décaissements fournisseurs (HT)": -cash_out_suppliers,
-        "Personnel": -cash_out_personnel,
-        "Remboursements prêts (annuités)": -loan_payment,
-        "Investissements (TTC)": -cash_out_invest,
-        "Impôts": -cash_out_tax,
-        "TVA (paiement net)": -vat_cash,
-        "Variation de trésorerie": cash_variation,
-        "Trésorerie": cash,
-    }, index=idx)
+    # ---------- BILANS (très simplifiés) ----------
+    # Immobilisations nettes = achats cumulés HT - amortissements cumulés
+    cum_invest_ht = invest_ht.cumsum()
+    cum_depr = depreciation.cumsum()
+    fixed_assets_net = cum_invest_ht - cum_depr
+    fixed_assets_net[fixed_assets_net < 0] = 0.0
 
-    by_year = lambda s: s.groupby(((s.index - 1) // 12) + 1).sum()
-    plan_fin = pd.DataFrame({
-        "Ressources": by_year(cash_in_sales + cap_inflow + subsidy_inflow + loan_inflow),
-        "Emplois": by_year(cash_out_suppliers + cash_out_personnel + loan_payment + cash_out_invest + cash_out_tax + vat_cash),
-    })
+    # Dettes financières = encours fin de mois (approx pris des schedules)
+    # On reprend la dernière valeur d'encours ajouté (si multi-emprunts: somme)
+    financial_debt = _zero_series(n) + 0.0
+    # loan_balances contient déjà l'encours "post paiement" de chaque mois
+    financial_debt += loan_balances
 
-    depcum = (pnl["Amortissements"] * -1).cumsum()
-    fixed_net = fixed_gross.cumsum() - depcum
-    ca_ttc = revenue_ht + vat_collected
-    receivables = (ca_ttc.cumsum() - cash_in_sales.cumsum()).clip(lower=0)
-    payables = (purchases_ht.cumsum() - cash_out_suppliers.cumsum()).clip(lower=0)
-    retained = (pnl["Résultat net"]).cumsum()
-    equity = cap_inflow.cumsum() + retained
+    # Capitaux propres cumulés = cumul des résultats nets (débute à 0)
+    equity = net_income.cumsum()
 
-    assets = pd.DataFrame({
-        "Immobilisations nettes": fixed_net,
-        "Créances clients (TTC)": receivables,
-        "Trésorerie": cash,
-    }, index=idx)
-    liabilities = pd.DataFrame({
-        "Capitaux propres": equity,
-        "Dettes financières": loan_outstanding,
-        "Dettes fournisseurs (HT)": payables,
-        "TVA nette à payer (+) / crédit (-)": vat_balance,
-    }, index=idx)
+    actif = pd.DataFrame(
+        {
+            "Immobilisations nettes": fixed_assets_net,
+            "Trésorerie": cash_end,
+        }
+    )
+    actif["Total actif"] = actif.sum(axis=1)
 
-    bilans = {"actif": assets, "passif": liabilities}
+    passif = pd.DataFrame(
+        {
+            "Capitaux propres (cumul RN)": equity,
+            "Dettes financières": financial_debt,
+        }
+    )
+    passif["Total passif"] = passif.sum(axis=1)
 
-    synthese = pd.DataFrame({
-        "CA cumulé (HT)": revenue_ht.cumsum(),
-        "EBITDA cumulé": ebitda.cumsum(),
-        "Résultat net cumulé": (pnl["Résultat net"]).cumsum(),
-        "Trésorerie": cash,
-    }, index=idx)
-
-    return {"pnl": pnl, "cashflow": cashflow, "plan_financement": plan_fin, "bilans": bilans, "synthese": synthese}
+    return {
+        "synthese": synthese,
+        "pnl": pnl,
+        "cashflow": cashflow,
+        "plan_financement": plan_financement,
+        "bilans": {
+            "actif": actif,
+            "passif": passif,
+        },
+    }
