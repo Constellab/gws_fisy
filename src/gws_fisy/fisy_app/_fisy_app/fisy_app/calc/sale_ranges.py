@@ -1,4 +1,3 @@
-
 from typing import List, Iterable, Dict, Tuple
 from pydantic import BaseModel
 
@@ -6,15 +5,15 @@ class OneTimeRange(BaseModel):
     activity: str
     start_month: int
     end_month: int
-    q0: float                      # starting quantity in start_month
-    monthly_growth: float = 0.0    # per-month growth rate (e.g., 0.05 = +5%/mo)
+    q0: float
+    monthly_growth: float = 0.0
 
 class SubscriptionRange(BaseModel):
     activity: str
     start_month: int
     end_month: int
-    q0: float                      # active subscriptions at start_month
-    monthly_growth: float = 0.0    # per-month growth on active subs
+    q0: float
+    monthly_growth: float = 0.0
 
 def _profile_cagr(n: int, q0: float, g: float) -> List[float]:
     if n <= 0:

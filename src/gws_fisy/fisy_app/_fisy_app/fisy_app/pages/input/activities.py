@@ -1,12 +1,12 @@
-
 import reflex as rx
 from ..layout import layout, header_row, make_cell, actions_cell
 from ...state import State
 
 @rx.page(route="/saisie/activites", on_load=State.on_load, title="Saisie — Activités")
 def activities():
-    LABELS = ["Nom activité", "Prix unitaire HT", "TVA", "Coût var. unitaire HT", "Taux coût var./prix"]
-    WIDTHS = ["220px", "160px", "120px", "220px", "200px"]
+    t = State.i18n
+    LABELS = [t["act_col_name"], t["act_col_price"], t["act_col_vat"], t["act_col_varunit"], t["act_col_varrate"]]
+    WIDTHS = ["220px","160px","120px","220px","200px"]
 
     def row(a, i):
         return rx.table.row(
@@ -20,10 +20,10 @@ def activities():
 
     return layout(
         rx.vstack(
-            rx.heading("Activités", size="5"),
-            rx.text("Paramétrez le prix unitaire HT, la TVA et les coûts variables."),
+            rx.heading(t["act_title"], size="5"),
+            rx.text(t["act_desc"]),
             rx.table.root(header_row(LABELS, WIDTHS), rx.table.body(rx.foreach(State.activities, row))),
-            rx.hstack(rx.button("Ajouter une activité", on_click=State.add_activity)),
+            rx.hstack(rx.button(t["act_add"], on_click=State.add_activity)),
             spacing="3", align_items="start",
         )
     )

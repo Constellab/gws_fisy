@@ -4,20 +4,21 @@ from ...state import State
 
 
 def zoom_controls():
+    i = State.i18n
     return rx.hstack(
         rx.vstack(
-            rx.text("Zoom — Début (mois)"),
+            rx.text(i["zoom.start"]),
             rx.input(type="number", value=State.zoom_start, on_change=State.zoom_set_start),
             align_items="start",
             spacing="1",
-            width="180px",
+            width="220px",
         ),
         rx.vstack(
-            rx.text("Zoom — Fin (mois)"),
+            rx.text(i["zoom.end"]),
             rx.input(type="number", value=State.zoom_end, on_change=State.zoom_set_end),
             align_items="start",
             spacing="1",
-            width="180px",
+            width="220px",
         ),
         rx.spacer(),
         rx.hstack(
@@ -38,7 +39,8 @@ def line_chart(data, x_key, series_defs):
         rx.recharts.line_chart(
             rx.recharts.cartesian_grid(stroke_dasharray="3 3"),
             rx.recharts.x_axis(data_key=x_key),
-            rx.recharts.y_axis(),
+            # 👉 Affiche l’unité sur l’axe Y (utilisée aussi par la Tooltip/Legend)
+            rx.recharts.y_axis(unit=State.unit_suffix),
             rx.recharts.tooltip(),
             rx.recharts.legend(),
             rx.foreach(
@@ -48,7 +50,7 @@ def line_chart(data, x_key, series_defs):
                     type_="monotone",
                     stroke_width=2,
                     stroke=s["color"],
-                    unit=s["unit"],  # unité affichée dans tooltip/legend
+                    unit=s["unit"],
                 ),
             ),
             rx.recharts.brush(data_key=x_key, height=22),
@@ -61,43 +63,51 @@ def line_chart(data, x_key, series_defs):
 
 @rx.page(route="/resultats/dash", on_load=State.on_load, title="Résultats — Tableaux de bord")
 def dashboard():
+    i = State.i18n
     return layout(
         rx.vstack(
-            rx.heading("Tableaux de bord — Résultats", size="7"),
-            rx.text("Graphiques interactifs (utilisez le zoom)."),
+            # 👉 Titre principal avec l’unité
+            rx.heading(i["results.dashboard"], " (", State.unit_suffix, ")", size="7"),
+            rx.text(i["results.dashboard.desc"]),
             rx.box(height="2"),
             zoom_controls(),
             rx.tabs.root(
                 rx.tabs.list(
-                    rx.tabs.trigger("Synthèse", value="syn"),
-                    rx.tabs.trigger("Compte de résultat", value="pnl"),
-                    rx.tabs.trigger("Cashflow", value="cf"),
+                    rx.tabs.trigger(i["results.syn"], value="syn"),
+                    rx.tabs.trigger(i["results.pnl"], value="pnl"),
+                    rx.tabs.trigger(i["results.cf"], value="cf"),
                 ),
+
+                # --- Synthèse ---
                 rx.tabs.content(
                     rx.vstack(
-                        rx.heading("Synthèse — Graphique", size="4"),
+                        rx.heading(i["results.syn"], " (", State.unit_suffix, ")", size="4"),
                         line_chart(State.synthese_chart_rows, "index", State.synthese_series_defs),
                         spacing="3",
                     ),
                     value="syn",
                 ),
+
+                # --- P&L ---
                 rx.tabs.content(
                     rx.vstack(
-                        rx.heading("Compte de résultat — Graphique", size="4"),
+                        rx.heading(i["results.pnl"], " (", State.unit_suffix, ")", size="4"),
                         line_chart(State.pnl_chart_rows, "index", State.pnl_series_defs),
                         spacing="3",
                     ),
                     value="pnl",
                 ),
+
+                # --- Cashflow ---
                 rx.tabs.content(
                     rx.vstack(
-                        rx.heading("Cashflow — Graphique", size="4"),
+                        rx.heading(i["results.cf"], " (", State.unit_suffix, ")", size="4"),
                         line_chart(State.cashflow_chart_rows, "index", State.cashflow_series_defs),
                         spacing="3",
                     ),
                     value="cf",
                 ),
-                # Premier onglet ouvert par défaut
+
                 default_value="syn",
                 orientation="horizontal",
                 style={"width": "100%"},

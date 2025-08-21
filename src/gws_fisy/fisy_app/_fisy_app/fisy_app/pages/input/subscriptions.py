@@ -1,12 +1,12 @@
-
 import reflex as rx
 from ..layout import layout, header_row, make_cell, actions_cell
 from ...state import State
 
 @rx.page(route="/saisie/abonnements", on_load=State.on_load, title="Saisie — Abonnement (Ventes récurrentes)")
 def subscriptions():
-    LABELS = ["Activité", "Début (mois)", "Fin (mois)", "Abonnés (q0)", "Croissance mensuelle"]
-    WIDTHS = ["220px", "140px", "140px", "160px", "200px"]
+    t = State.i18n
+    LABELS = [t["sub_col_activity"], t["sub_col_start"], t["sub_col_end"], t["sub_col_q0"], t["sub_col_growth"]]
+    WIDTHS = ["220px","140px","140px","160px","200px"]
 
     def row(r, i):
         return rx.table.row(
@@ -20,10 +20,10 @@ def subscriptions():
 
     return layout(
         rx.vstack(
-            rx.heading("Abonnement (Ventes récurrentes)", size="5"),
-            rx.text("Définissez des plages d'abonnements (actifs mensuels) avec croissance mensuelle. Le MRR est calculé dans la synthèse."),
+            rx.heading(t["sub_title"], size="5"),
+            rx.text(t["sub_desc"]),
             rx.table.root(header_row(LABELS, WIDTHS), rx.table.body(rx.foreach(State.subscription_ranges, row))),
-            rx.hstack(rx.button("Ajouter une plage", on_click=State.add_subscription)),
+            rx.hstack(rx.button(t["sub_add"], on_click=State.add_subscription)),
             spacing="3", align_items="start",
         )
     )

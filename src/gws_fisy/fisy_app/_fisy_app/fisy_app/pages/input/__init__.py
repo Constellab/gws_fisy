@@ -1,1 +1,1 @@
-# input pages package
+# input pages

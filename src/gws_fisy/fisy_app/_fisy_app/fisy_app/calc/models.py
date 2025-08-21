@@ -1,4 +1,3 @@
-
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -22,7 +21,7 @@ class Activity(BaseModel):
 
 class Order(BaseModel):
     activity: str
-    month_index: int  # 1..N
+    month_index: int
     quantity: float
 
 class PersonnelLine(BaseModel):

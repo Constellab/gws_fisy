@@ -1,4 +1,3 @@
-
 from .models import (
     Config,
     Activity,
@@ -17,7 +16,6 @@ from .sale_ranges import (
     expand_one_time_ranges_to_orders,
     expand_subscription_ranges_to_orders,
 )
-
 __all__ = [
     "Config","Activity","Order","PersonnelLine","ChargeExterne","Investment","Loan",
     "CapitalInjection","Subsidy","OneTimeRange","SubscriptionRange",

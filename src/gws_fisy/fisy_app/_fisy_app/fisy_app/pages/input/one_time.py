@@ -1,12 +1,12 @@
-
 import reflex as rx
 from ..layout import layout, header_row, make_cell, actions_cell
 from ...state import State
 
 @rx.page(route="/saisie/vente-ponctuelle", on_load=State.on_load, title="Saisie — Vente ponctuelle")
 def one_time():
-    LABELS = ["Activité", "Début (mois)", "Fin (mois)", "q0 (début)", "Croissance mensuelle"]
-    WIDTHS = ["220px", "140px", "140px", "160px", "200px"]
+    t = State.i18n
+    LABELS = [t["ot_col_activity"], t["ot_col_start"], t["ot_col_end"], t["ot_col_q0"], t["ot_col_growth"]]
+    WIDTHS = ["220px","140px","140px","160px","200px"]
 
     def row(r, i):
         return rx.table.row(
@@ -20,10 +20,10 @@ def one_time():
 
     return layout(
         rx.vstack(
-            rx.heading("Vente ponctuelle", size="5"),
-            rx.text("Définissez des plages de ventes ponctuelles avec une croissance mensuelle (ex: 0.05 = +5%/mois)."),
+            rx.heading(t["ot_title"], size="5"),
+            rx.text(t["ot_desc"]),
             rx.table.root(header_row(LABELS, WIDTHS), rx.table.body(rx.foreach(State.one_time_ranges, row))),
-            rx.hstack(rx.button("Ajouter une plage", on_click=State.add_one_time)),
+            rx.hstack(rx.button(t["ot_add"], on_click=State.add_one_time)),
             spacing="3", align_items="start",
         )
     )
