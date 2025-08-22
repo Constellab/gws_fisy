@@ -1,63 +1,89 @@
-from typing import Optional
-from pydantic import BaseModel, Field
+from dataclasses import dataclass
+from typing import List
 
-class Config(BaseModel):
-    months: int = 36
-    tva_default: float = 0.2
-    start_year: int = 2025
-    start_month: int = 1
-    corporate_tax_rate: float = 0.25
-    dso_days: int = 30
-    dpo_days: int = 30
-    dio_days: int = 0
-    initial_cash: float = 0.0
+@dataclass
+class Config:
+    months: int
+    tva_default: float
+    start_year: int
+    start_month: int
+    corporate_tax_rate: float
+    dso_days: int
+    dpo_days: int
+    dio_days: int
+    initial_cash: float
 
-class Activity(BaseModel):
+@dataclass
+class Activity:
     name: str
-    unit_price_ht: float = 0.0
-    vat_rate: float = 0.2
+    unit_price_ht: float
+    vat_rate: float
     variable_cost_per_unit_ht: float = 0.0
     variable_cost_rate_on_price: float = 0.0
 
-class Order(BaseModel):
+@dataclass
+class Order:
     activity: str
     month_index: int
     quantity: float
 
-class PersonnelLine(BaseModel):
+@dataclass
+class OneTimeRange:
+    activity: str
+    start_month: int
+    end_month: int
+    q0: float
+    monthly_growth: float
+
+@dataclass
+class SubscriptionRange:
+    activity: str
+    start_month: int
+    end_month: int
+    q0: float
+    monthly_growth: float
+
+@dataclass
+class PersonnelLine:
     title: str
-    monthly_salary_gross: float = 0.0
-    employer_cost_rate: float = 0.45
-    start_month: int = 1
+    monthly_salary_gross: float
+    employer_cost_rate: float
+    start_month: int
+    end_month: int = 999
+    count: int = 1
+
+@dataclass
+class ChargeExterne:
+    label: str
+    monthly_amount_ht: float
+    vat_rate: float
+    start_month: int
     end_month: int = 999
 
-class ChargeExterne(BaseModel):
+@dataclass
+class Investment:
     label: str
-    monthly_amount_ht: float = 0.0
-    vat_rate: float = 0.2
-    start_month: int = 1
-    end_month: int = 999
+    amount_ht: float
+    vat_rate: float
+    purchase_month: int
+    amort_years: int
 
-class Investment(BaseModel):
+@dataclass
+class Loan:
     label: str
-    amount_ht: float = 0.0
-    vat_rate: float = 0.2
-    purchase_month: int = 1
-    amort_years: int = 3
+    principal: float
+    annual_rate: float
+    months: int
+    start_month: int
 
-class Loan(BaseModel):
+@dataclass
+class CapitalInjection:
     label: str
-    principal: float = 0.0
-    annual_rate: float = 0.04
-    months: int = 36
-    start_month: int = 1
+    amount: float
+    month: int
 
-class CapitalInjection(BaseModel):
+@dataclass
+class Subsidy:
     label: str
-    amount: float = 0.0
-    month: int = 1
-
-class Subsidy(BaseModel):
-    label: str
-    amount: float = 0.0
-    month: int = 1
+    amount: float
+    month: int
