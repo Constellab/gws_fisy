@@ -1,7 +1,8 @@
 # fisy_app/pages/results/tables.py
 import reflex as rx
-from ..layout import layout
+
 from ...state import State
+from ..layout import layout
 
 
 def _table(cols, rows_values):
@@ -27,10 +28,11 @@ def _table(cols, rows_values):
     )
 
 
-@rx.page(route="/resultats/synthese", on_load=State.on_load, title="Résultats — Synthèse")
+@rx.page(route="/results/summary", on_load=State.on_load, title="Results — Summary")
 def result_synthese():
     return layout(
         rx.vstack(
+            rx.heading(State.i18n["results.syn"], " (", State.unit_suffix, ")", size="7"),
             rx.tabs.root(
                 rx.tabs.list(
                     rx.tabs.trigger(State.i18n["results.tabs.annual"], value="y"),
@@ -57,10 +59,11 @@ def result_synthese():
     )
 
 
-@rx.page(route="/resultats/compte-resultat", on_load=State.on_load, title="Résultats — Compte de résultat")
+@rx.page(route="/results/income-statement", on_load=State.on_load, title="Results — Income statement")
 def result_pnl():
     return layout(
         rx.vstack(
+            rx.heading(State.i18n["results.pnl"], " (", State.unit_suffix, ")", size="7"),
             rx.tabs.root(
                 rx.tabs.list(
                     rx.tabs.trigger(State.i18n["results.tabs.annual"], value="y"),
@@ -87,10 +90,11 @@ def result_pnl():
     )
 
 
-@rx.page(route="/resultats/cashflow", on_load=State.on_load, title="Résultats — Cashflow")
+@rx.page(route="/results/cashflow", on_load=State.on_load, title="Results — Cashflow")
 def result_cashflow():
     return layout(
         rx.vstack(
+            rx.heading(State.i18n["results.cf"], " (", State.unit_suffix, ")", size="7"),
             rx.tabs.root(
                 rx.tabs.list(
                     rx.tabs.trigger(State.i18n["results.tabs.annual"], value="y"),
@@ -117,12 +121,13 @@ def result_cashflow():
     )
 
 
-@rx.page(route="/resultats/plan-financement", on_load=State.on_load, title="Résultats — Plan de financement")
+@rx.page(route="/results/funding-plan", on_load=State.on_load, title="Results — Funding plan")
 def result_plan():
     # Pour l'onglet mensuel du plan, on réutilise (temporairement) les colonnes/valeurs mensuelles du cashflow,
     # sauf si tu ajoutes des vars dédiées plan_table_monthly_cols/values dans State.
     return layout(
         rx.vstack(
+            rx.heading(State.i18n["results.funding_plan"], " (", State.unit_suffix, ")", size="7"),
             rx.tabs.root(
                 rx.tabs.list(
                     rx.tabs.trigger(State.i18n["results.tabs.annual"], value="y"),
@@ -149,13 +154,14 @@ def result_plan():
     )
 
 
-@rx.page(route="/resultats/bilans", on_load=State.on_load, title="Résultats — Bilans")
+@rx.page(route="/results/balance-sheets", on_load=State.on_load, title="Results — Balance sheets")
 def result_bilans():
     return layout(
         rx.vstack(
-            rx.heading("Bilan — Actif", size="5"),
+            rx.heading(State.i18n["results.balance_sheets"], " (", State.unit_suffix, ")", size="7"),
+            rx.heading(State.i18n["results.balance.assets"], size="5"),
             _table(State.bilan_actif_table_cols, State.bilan_actif_table_values),
-            rx.heading("Bilan — Passif", size="5"),
+            rx.heading(State.i18n["results.balance.liabilities"], size="5"),
             _table(State.bilan_passif_table_cols, State.bilan_passif_table_values),
             spacing="4",
             align_items="start",

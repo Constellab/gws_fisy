@@ -1,9 +1,19 @@
+from typing import Dict, List
+
 import pandas as pd
-from typing import List, Dict
+
 from .models import (
-    Config, Activity, Order, PersonnelLine, ChargeExterne,
-    Investment, Loan, CapitalInjection, Subsidy
+    Activity,
+    CapitalInjection,
+    ChargeExterne,
+    Config,
+    Investment,
+    Loan,
+    Order,
+    PersonnelLine,
+    Subsidy,
 )
+
 
 def _idx_months(cfg: Config) -> pd.Index:
     return pd.Index(range(1, cfg.months + 1), name="index")
@@ -31,6 +41,10 @@ def compute_all(
     var_cost = pd.Series(0.0, index=idx)
     vat_sales = pd.Series(0.0, index=idx)
     qty_by_act = {}
+    qty_by_act_one_time = {}
+    qty_by_act_subscription = {}
+
+    # Process one-time orders
     if orders:
         for o in orders:
             a = act_map.get(o.activity)
@@ -46,6 +60,27 @@ def compute_all(
             vat_sales[m] += q * p * float(a.vat_rate)
             qty_by_act.setdefault(a.name, pd.Series(0.0, index=idx))
             qty_by_act[a.name][m] += q
+            qty_by_act_one_time.setdefault(a.name, pd.Series(0.0, index=idx))
+            qty_by_act_one_time[a.name][m] += q
+
+    # Process subscription orders
+    if subs_orders:
+        for o in subs_orders:
+            a = act_map.get(o.activity)
+            if a is None:
+                continue
+            m = int(o.month_index)
+            if m not in idx:
+                continue
+            q = float(o.quantity)
+            p = float(a.unit_price_ht)
+            rev[m] += q * p
+            var_cost[m] += q * (float(a.variable_cost_per_unit_ht) + float(a.variable_cost_rate_on_price) * p)
+            vat_sales[m] += q * p * float(a.vat_rate)
+            qty_by_act.setdefault(a.name, pd.Series(0.0, index=idx))
+            qty_by_act[a.name][m] += q
+            qty_by_act_subscription.setdefault(a.name, pd.Series(0.0, index=idx))
+            qty_by_act_subscription[a.name][m] += q
 
     # ----- Personnel -----
     pers = pd.Series(0.0, index=idx)
@@ -103,29 +138,30 @@ def compute_all(
     for i in range(1, len(idx)):
         cash.iloc[i] = cash.iloc[i-1] + op_cf.iloc[i] + inv_cf.iloc[i] + fin_cf.iloc[i]
 
-    # ----- MRR -----
-    mrr = pd.Series(0.0, index=idx)
+    # ----- RR (Recurring Revenue) -----
+    rr = pd.Series(0.0, index=idx)
     if subs_orders:
         for o in subs_orders:
             a = act_map.get(o.activity)
             if a is None: continue
             m = int(o.month_index)
             if m in idx:
-                mrr[m] += float(o.quantity) * float(a.unit_price_ht)
+                q = float(o.quantity)
+                rr[m] += q * float(a.unit_price_ht)
 
     # ----- DataFrames -----
     synthese = pd.DataFrame({
-        "CA HT": rev,
-        "Coûts variables HT": var_cost,
-        "Marge sur coûts variables HT": rev - var_cost,
-        "Charges de personnel": pers,
-        "Charges externes": chg,
+        "Revenue HT": rev,
+        "Variable costs HT": var_cost,
+        "Gross margin HT": rev - var_cost,
+        "Personnel costs": pers,
+        "External charges": chg,
         "EBITDA": ebitda,
-        "Amortissements": dep,
+        "Depreciation": dep,
         "EBIT": ebit,
-        "IS": tax,
-        "Résultat net": net,
-        "MRR": mrr
+        "Corporate tax": tax,
+        "Net income": net,
+        "RR": rr
     })
 
     pnl = pd.DataFrame({
@@ -148,28 +184,28 @@ def compute_all(
         "Cash end": cash
     })
 
-    # Plan de financement (annuel)
+    # Funding plan (annual)
     years = []
     for m in idx:
         year = cfg.start_year + (cfg.start_month - 1 + (m - 1)) // 12
         years.append(year)
     df_plan = pd.DataFrame({
-        "Année": years,
-        "Apports+Subventions": fin_in,
+        "Year": years,
+        "Capital+Subsidies": fin_in,
         "Capex": capex,
-        "Taxe": tax,
-        "Variation Trésorerie": op_cf + inv_cf + fin_cf
+        "Tax": tax,
+        "Cash variation": op_cf + inv_cf + fin_cf
     })
-    plan_financement = df_plan.groupby("Année", as_index=True).sum(numeric_only=True)
+    plan_financement = df_plan.groupby("Year", as_index=True).sum(numeric_only=True)
 
-    # Bilans simplifiés
+    # Simplified balance sheets
     actif = pd.DataFrame({
         "Cash": cash,
-        "Immobilisations nettes": (capex.cumsum() - dep.cumsum()).clip(lower=0.0)
+        "Net fixed assets": (capex.cumsum() - dep.cumsum()).clip(lower=0.0)
     })
     passif = pd.DataFrame({
-        "Capitaux propres (approx)": (net).cumsum() + float(cfg.initial_cash) + (fin_in).cumsum(),
-        "Dettes (placeholder)": pd.Series(0.0, index=idx)
+        "Equity (approx)": (net).cumsum() + float(cfg.initial_cash) + (fin_in).cumsum(),
+        "Liabilities (placeholder)": pd.Series(0.0, index=idx)
     })
 
     return {
@@ -178,5 +214,7 @@ def compute_all(
         "cashflow": cashflow,
         "plan_financement": plan_financement,
         "bilans": {"actif": actif, "passif": passif},
-        "qty_by_activity": qty_by_act
+        "qty_by_activity": qty_by_act,
+        "qty_by_activity_one_time": qty_by_act_one_time,
+        "qty_by_activity_subscription": qty_by_act_subscription
     }

@@ -5,5 +5,7 @@
         "param_name": "Value from dev_config.json"
     },
     "env_type": "NONE",
-    "env_file_path": ""
+    "env_file_path": "",
+    "is_reflex_enterprise": false,
+    "dev_user_email": ""
 }

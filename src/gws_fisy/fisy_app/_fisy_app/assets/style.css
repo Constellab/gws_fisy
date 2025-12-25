@@ -1,0 +1,352 @@
+/* Temporary hide build with reflex */
+a[href="https://reflex.dev"] {
+    display: none !important;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/font/PlusJakartaSans-Regular.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/font/PlusJakartaSans-Light.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/font/PlusJakartaSans-SemiBold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/font/PlusJakartaSans-Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+.dense-markdown{
+    line-height: 1;
+}
+
+.dense-markdown h1,
+.dense-markdown h2,
+.dense-markdown h3,
+.dense-markdown h4,
+.dense-markdown h5,
+.dense-markdown h6,
+.dense-markdown p,
+.dense-markdown ul,
+.dense-markdown ol,
+.dense-markdown li {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+
+.radix-themes{
+    --default-font-family: 'Plus Jakarta Sans', sans-serif;
+    --cursor-button: pointer;
+    --cursor-checkbox: pointer;
+    --cursor-disabled: not-allowed;
+    --cursor-link: pointer;
+    --cursor-menu-item: pointer;
+    --cursor-radio: pointer;
+    --cursor-slider-thumb: grab;
+    --cursor-slider-thumb-active: grabbing;
+    --cursor-switch: pointer; 
+}
+
+.AccordionTrigger {
+    cursor: pointer;
+}
+
+/* ========== FISY App Custom Styles ========== */
+
+/* Sidebar styling - matching gws_project style with fixed dimensions */
+.rt-Box[data-sidebar="true"] {
+    background: var(--gray-1);
+    border-right: 1px solid var(--gray-5);
+}
+
+/* Custom scrollbar for sidebar */
+.rt-Box[data-sidebar="true"]::-webkit-scrollbar {
+    width: 8px;
+}
+
+.rt-Box[data-sidebar="true"]::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.rt-Box[data-sidebar="true"]::-webkit-scrollbar-thumb {
+    background: var(--gray-6);
+    border-radius: 4px;
+}
+
+.rt-Box[data-sidebar="true"]::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-8);
+}
+
+/* Navigation link hover effects - matching gws_project */
+.rt-Link:hover {
+    background: var(--gray-3);
+    transition: background 0.2s ease;
+}
+
+/* Section headers in sidebar */
+.rt-Box[data-sidebar="true"] .rt-Text[data-accent-color] {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.75rem;
+}
+
+/* Table enhancements */
+.rt-TableRoot {
+    border: 1px solid var(--gray-6);
+    border-radius: var(--radius-3);
+    overflow: hidden;
+    background: white;
+}
+
+.rt-TableHeader {
+    background: var(--gray-3);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.rt-TableRow:hover {
+    background: var(--accent-2);
+    transition: background 0.15s ease;
+}
+
+.rt-TableCell {
+    border-bottom: 1px solid var(--gray-4);
+}
+
+/* Input field styling */
+.rt-TextFieldInput {
+    transition: all 0.2s ease;
+}
+
+.rt-TextFieldInput:focus {
+    border-color: var(--accent-9);
+    box-shadow: 0 0 0 2px var(--accent-4);
+}
+
+/* Number inputs for financial data */
+input[type="number"] {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+}
+
+/* Button enhancements */
+.rt-Button {
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.rt-Button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.rt-Button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+/* Delete button styling */
+.rt-Button[data-accent-color="red"] {
+    opacity: 0.8;
+}
+
+.rt-Button[data-accent-color="red"]:hover {
+    opacity: 1;
+}
+
+/* Tab styling */
+.rt-TabsList {
+    background: var(--gray-2);
+    padding: 4px;
+    border-radius: var(--radius-3);
+}
+
+.rt-TabsTrigger {
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.rt-TabsTrigger[data-state="active"] {
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Chart containers */
+.recharts-wrapper {
+    border: 1px solid var(--gray-6);
+    border-radius: var(--radius-3);
+    padding: 16px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Headings */
+.rt-Heading {
+    color: var(--gray-12);
+    font-weight: 700;
+}
+
+/* Cards/Containers */
+.rt-VStack > .rt-VStack,
+.rt-HStack > .rt-VStack {
+    background: var(--gray-1);
+    padding: 16px;
+    border-radius: var(--radius-3);
+}
+
+/* Configuration page styling */
+.rt-Select {
+    min-width: 200px;
+}
+
+/* Financial data highlighting */
+.positive-value {
+    color: var(--green-11);
+    font-weight: 600;
+}
+
+.negative-value {
+    color: var(--red-11);
+    font-weight: 600;
+}
+
+.neutral-value {
+    color: var(--gray-11);
+}
+
+/* Zoom controls styling */
+input[type="number"].zoom-input {
+    width: 80px;
+    text-align: center;
+}
+
+/* Results page styling */
+.results-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Responsive table wrapper */
+.rt-TableRoot {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* Scroll shadows for tables */
+.rt-TableRoot::before,
+.rt-TableRoot::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.rt-TableRoot::before {
+    left: 0;
+    background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0));
+}
+
+.rt-TableRoot::after {
+    right: 0;
+    background: linear-gradient(to left, rgba(255,255,255,1), rgba(255,255,255,0));
+}
+
+/* Loading states */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.loading {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Print styles */
+@media print {
+    .rt-VStack[data-sidebar="true"] {
+        display: none;
+    }
+    
+    .rt-Button {
+        display: none;
+    }
+    
+    .rt-TabsList {
+        display: none;
+    }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .rt-VStack[data-sidebar="true"] {
+        position: fixed;
+        left: -240px;
+        transition: left 0.3s ease;
+        z-index: 100;
+    }
+    
+    .rt-TableRoot {
+        font-size: 0.9em;
+    }
+    
+    input[type="number"] {
+        font-size: 0.9em;
+    }
+}
+
+/* Accessibility improvements */
+.rt-Button:focus-visible,
+.rt-Link:focus-visible,
+.rt-TextFieldInput:focus-visible {
+    outline: 2px solid var(--accent-9);
+    outline-offset: 2px;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--gray-3);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray-7);
+    border-radius: var(--radius-2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-9);
+}
